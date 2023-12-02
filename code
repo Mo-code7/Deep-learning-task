@@ -1,0 +1,246 @@
+
+
+import numpy as np # linear algebra
+import pandas as pd # data processing, CSV file I/O (e.g. pd.read_csv)
+
+import os
+for dirname, _, filenames in os.walk('/content/drive/MyDrive/MKdata'):
+    for filename in filenames:
+        print(os.path.join(dirname, filename))
+
+
+
+import os
+import numpy as np
+from PIL import Image
+
+def load_images(root_folder, folder_names, target_size=(224,224)):
+    # Lists to store image data (X) and labels (y)
+    X = []
+    y = [] 
+
+    label_counter = 0
+    
+    for folder_name in folder_names:
+        
+        folder_path = os.path.join(root_folder, folder_name)
+
+        if os.path.isdir(folder_path):
+            for filename in sorted(os.listdir(folder_path)):
+                img_path = os.path.join(folder_path, filename)
+
+                with Image.open(img_path) as img:
+                    img_resized = img.resize(target_size)
+
+                    img_array = np.array(img_resized)
+
+                    X.append(img_array)
+
+                    y.append(label_counter)
+
+            label_counter += 1
+
+    return np.array(X), np.array(y)
+
+root_folder = '/content/drive/MyDrive/MKdata/D1/train'
+selected_folders = ['Class (1)', 'Class (2)']
+X_train, y_train = load_images(root_folder, selected_folders)
+root_folder = '/content/drive/MyDrive/MKdata/D1/test'
+X_test, y_test = load_images(root_folder, selected_folders)
+
+print(79879132468498X_train79879132468498, X_train.shape)
+print(79879132468498y_train79879132468498, y_train.shape)
+print(79879132468498X_test79879132468498, X_test.shape)
+print(79879132468498y_test79879132468498, y_test.shape)
+
+y_train
+
+y_train = np.array(y_train)
+X_train = np.array(X_train)
+y_test = np.array(y_test)
+X_test = np.array(X_test)
+print(79879132468498X_train Shape: 79879132468498, X_train.shape)
+print(79879132468498X_test Shape: 79879132468498, X_test.shape)
+print(79879132468498y_train Shape: 79879132468498, y_train.shape)
+print(79879132468498y_test Shape: 79879132468498, y_test.shape)
+
+X_train=X_train/255.0
+X_test=X_test/255.0
+
+print(X_train[:5])
+
+from tensorflow.keras.preprocessing.image import ImageDataGenerator
+
+datagen = ImageDataGenerator(
+    rotation_range=20,
+    width_shift_range=0.2,
+    height_shift_range=0.2,
+    shear_range=0.2,
+    zoom_range=0.2,
+    rescale=1./255,
+    horizontal_flip=True,
+    fill_mode='nearest'
+)
+
+
+
+
+
+def augment_dataset(dataset):
+    augmented_data = []
+    for img in dataset:
+        img = np.expand_dims(img, axis=0)
+        for _ in range(5): 
+            seed = np.random.randint(0, 1000) 
+            for batch in datagen.flow(img, batch_size=1, seed=seed):
+                augmented_data.append(np.squeeze(batch))
+                break
+    return np.array(augmented_data)
+
+
+
+
+X_train_augmented = augment_dataset(X_train)
+y_train_augmented = np.repeat(y_train,5, axis=0)
+
+
+X_test_augmented = augment_dataset(X_test)
+y_test_augmented = np.repeat(y_test,5, axis=0)
+
+
+
+
+X_test_augmented = augment_dataset(X_test)
+y_test_augmented = np.repeat(y_test,5, axis=0)
+
+print(79879132468498X_train_augmented shape:79879132468498, X_train_augmented.shape)
+print(79879132468498y_train_augmented shape:79879132468498, y_train_augmented.shape)
+
+print(79879132468498X_test_augmented shape:79879132468498, X_test_augmented.shape)
+print(79879132468498y_test_augmented shape:79879132468498, y_test_augmented.shape)
+
+from sklearn.utils import shuffle
+
+X_train_combined = np.concatenate((X_train, X_train_augmented))
+y_train_combined = np.concatenate((y_train, y_train_augmented))
+
+X_test_combined = np.concatenate((X_test, X_test_augmented))
+y_test_combined = np.concatenate((y_test, y_test_augmented))
+
+
+X_train_combined, y_train_combined = shuffle(X_train_combined, y_train_combined, random_state=42)
+X_test_combined, y_test_combined = shuffle(X_test_combined, y_test_combined, random_state=42)
+
+print(y_train_combined.shape)
+print(y_test_combined.shape)
+
+VGG 16
+
+!pip install autokeras
+
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.optimizers import Adam
+from keras_tuner.tuners import RandomSearch
+from tensorflow.keras.layers import Conv2D, MaxPooling2D, Flatten, Dense, Dropout
+from tensorflow.keras.applications import VGG16,Xception,VGG19
+from keras.datasets import cifar10
+from keras.applications.vgg16 import preprocess_input
+from keras.callbacks import EarlyStopping
+
+import tensorflow as tf
+from tensorflow.keras.applications import VGG16
+from tensorflow.keras.applications import EfficientNetB0
+
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Dense, Flatten
+from tensorflow.keras.optimizers import Adam
+from tensorflow.keras.preprocessing.image import ImageDataGenerator
+from keras_tuner.tuners import RandomSearch
+
+
+
+
+base_model = VGG16(weights='imagenet', include_top=False, input_shape=(224, 224, 3))
+
+
+for layer in base_model.layers:
+    layer.trainable = False
+
+def build_model(hp):
+    model = Sequential()
+    model.add(base_model)
+    model.add(Flatten())
+
+    hp_units = hp.Int('units', min_value=32, max_value=512, step=32)
+    model.add(Dense(units=hp_units, activation='relu'))
+    model.add(Dropout(0.5))
+    model.add(Dense(1, activation='sigmoid'))  # Assuming binary classification
+
+    hp_learning_rate = hp.Choice('learning_rate', values=[1e-2, 1e-3, 1e-4])
+
+    model.compile(optimizer=Adam(learning_rate=hp_learning_rate),
+                  loss='binary_crossentropy',
+                  metrics=['accuracy'])
+
+    return model
+
+tuner = RandomSearch(
+    build_model,
+    objective='val_accuracy',
+    max_trials=5, 
+    directory='tuner_results',
+    project_name='vgg16_tuning'
+)
+train_datagen = ImageDataGenerator(rescale=1./255)
+test_datagen = ImageDataGenerator(rescale=1./255)
+train_generator = train_datagen.flow(X_train_combined, y_train_combined, batch_size=32)
+test_generator = test_datagen.flow(X_test_combined, y_test_combined, batch_size=32)
+
+
+tuner.search(train_generator, epochs=1, validation_data=test_generator)
+best_model = tuner.get_best_models(num_models=1)[0]
+best_model.summary()
+
+
+model_vgg16 = VGG16(weights=79879132468498imagenet79879132468498, include_top=False, input_shape=(224, 224, 3))
+model = Sequential()
+model.add(model_vgg16)
+model.add(Flatten())
+
+model.add(Dropout(0.2))
+model.add(Dense(1, activation='relu'))
+model.add(Dropout(0.2))
+model.add(Dense(1, activation='sigmoid'))
+model.summary()
+
+from tensorflow.keras.models import Model
+import tensorflow as tf
+from tensorflow.keras import backend as K
+metrics = [
+        'accuracy',
+        tf.keras.metrics.AUC(),
+        tf.keras.metrics.Recall(),
+        tf.keras.metrics.Precision(),
+        tf.keras.metrics.SpecificityAtSensitivity(0.5),
+        tf.keras.metrics.SensitivityAtSpecificity(0.5),
+        tf.keras.metrics.FalseNegatives(),
+        tf.keras.metrics.FalsePositives(),
+        tf.keras.metrics.TrueNegatives(),
+        tf.keras.metrics.TruePositives(),
+        tf.keras.metrics.F1Score()]
+
+model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=0.111), loss='binary_crossentropy', metrics=metrics)
+
+
+
+callbacks = [
+    tf.keras.callbacks.EarlyStopping(
+   monitor='val_loss',patience=3,
+     restore_best_weights=True
+    )
+]
+# history = best_model.fit(X_train_combined, y_train_combined.astype('float32'), epochs=10,batch_size=32,validation_split=0.10,callbacks=callbacks)
+
+history = model.fit(X_train_combined, y_train_combined.astype('float32'), epochs=20,callbacks=callbacks)
+
+model.evaluate(X_test_combined,y_test_combined.astype('float32'))
