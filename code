@@ -1,14 +1,32 @@
 
 
-import numpy as np # linear algebra
-import pandas as pd # data processing, CSV file I/O (e.g. pd.read_csv)
+import tensorflow as tf
+from tensorflow import keras
+from tensorflow.keras import layers
+import matplotlib.pyplot as plt
+import numpy as np
+import tifffile as tiff
+import os
+import cv2
+from skimage.transform import resize
+from sklearn.preprocessing import LabelEncoder
+import os
+from PIL import Image
+from sklearn.preprocessing import LabelEncoder
+from sklearn.model_selection import train_test_split
+import tensorflow as tf
+from keras import regularizers
+from tensorflow.keras.preprocessing.image import ImageDataGenerator
+from tensorflow.keras.applications import EfficientNetB0
+from tensorflow.keras.applications.inception_v3 import InceptionV3
+from tensorflow.keras.applications.vgg16 import VGG16
+from tensorflow.keras.applications.resnet50 import ResNet50
+from tensorflow.keras.applications.mobilenet_v2 import MobileNetV2
 
 import os
 for dirname, _, filenames in os.walk('/content/drive/MyDrive/MKdata'):
     for filename in filenames:
         print(os.path.join(dirname, filename))
-
-
 
 import os
 import numpy as np
@@ -16,30 +34,41 @@ from PIL import Image
 
 def load_images(root_folder, folder_names, target_size=(224,224)):
     # Lists to store image data (X) and labels (y)
-    X = []
-    y = [] 
+    X = []  # Image data
+    y = []  # Corresponding labels
 
-    label_counter = 0
-    
+    label_counter = 0  # Counter to assign labels to different classes
+
+    # Loop through each folder representing a class
     for folder_name in folder_names:
-        
+        # Construct the path for the current folder
         folder_path = os.path.join(root_folder, folder_name)
 
+        # Check if the folder path exists and is a directory
         if os.path.isdir(folder_path):
+            # For each image in the folder
             for filename in sorted(os.listdir(folder_path)):
+                # Construct the full path of the image file
                 img_path = os.path.join(folder_path, filename)
 
+                # Open the image using PIL
                 with Image.open(img_path) as img:
+                    # Resize the image to the target size
                     img_resized = img.resize(target_size)
 
+                    # Convert the image to a NumPy array
                     img_array = np.array(img_resized)
 
+                    # Append the image array to the X list
                     X.append(img_array)
 
+                    # Append the corresponding label to the y list
                     y.append(label_counter)
 
+            # Increment the label counter for the next class
             label_counter += 1
 
+    # Convert the lists of images and labels to NumPy arrays and return
     return np.array(X), np.array(y)
 
 root_folder = '/content/drive/MyDrive/MKdata/D1/train'
@@ -48,10 +77,12 @@ X_train, y_train = load_images(root_folder, selected_folders)
 root_folder = '/content/drive/MyDrive/MKdata/D1/test'
 X_test, y_test = load_images(root_folder, selected_folders)
 
-print(79879132468498X_train79879132468498, X_train.shape)
-print(79879132468498y_train79879132468498, y_train.shape)
-print(79879132468498X_test79879132468498, X_test.shape)
-print(79879132468498y_test79879132468498, y_test.shape)
+print("X_train", X_train.shape)
+print("y_train", y_train.shape)
+print("X_test", X_test.shape)
+print("y_test", y_test.shape)
+
+
 
 y_train
 
@@ -59,188 +90,342 @@ y_train = np.array(y_train)
 X_train = np.array(X_train)
 y_test = np.array(y_test)
 X_test = np.array(X_test)
-print(79879132468498X_train Shape: 79879132468498, X_train.shape)
-print(79879132468498X_test Shape: 79879132468498, X_test.shape)
-print(79879132468498y_train Shape: 79879132468498, y_train.shape)
-print(79879132468498y_test Shape: 79879132468498, y_test.shape)
+print("X_train Shape: ", X_train.shape)
+print("X_test Shape: ", X_test.shape)
+print("y_train Shape: ", y_train.shape)
+print("y_test Shape: ", y_test.shape)
 
 X_train=X_train/255.0
 X_test=X_test/255.0
 
-print(X_train[:5])
+batch_size = 32
+img_size=224
+epochs=5
+NUM_CLASSES=2
 
-from tensorflow.keras.preprocessing.image import ImageDataGenerator
-
-datagen = ImageDataGenerator(
-    rotation_range=20,
+d1_train_ds=ImageDataGenerator(
+    rescale=1./255,
+    rotation_range=40,
     width_shift_range=0.2,
     height_shift_range=0.2,
     shear_range=0.2,
     zoom_range=0.2,
-    rescale=1./255,
     horizontal_flip=True,
     fill_mode='nearest'
-)
+).flow_from_directory(
+'/content/drive/MyDrive/MKdata/D1/train',
+target_size = (img_size, img_size),
+batch_size = batch_size,
+class_mode = "categorical")
+d1_val_ds=ImageDataGenerator(
+    rescale=1./255,
+    rotation_range=40,
+    width_shift_range=0.2,
+    height_shift_range=0.2,
+    shear_range=0.2,
+    zoom_range=0.2,
+    horizontal_flip=True,
+    fill_mode='nearest'
+).flow_from_directory(
+'/content/drive/MyDrive/MKdata/D1/test',
+target_size = (img_size, img_size),
+batch_size = batch_size,
+class_mode = "categorical")
+
+from google.colab import drive
+drive.mount('/content/drive')
+
+# d2_train_ds=ImageDataGenerator(
+#     rescale=1./255
+# ).flow_from_directory(
+# '/content/drive/MyDrive/MKdata/D2/train_patch',
+# target_size = (img_size, img_size),
+# batch_size = batch_size,
+# class_mode = "categorical")
+# d2_val_ds=ImageDataGenerator(
+#     rescale=1./255
+# ).flow_from_directory(
+# '/content/drive/MyDrive/MKdata/D2/test_patch',
+# target_size = (img_size, img_size),
+# batch_size = batch_size,
+# class_mode = "categorical")
+
+# d1_train_ds = d1_train_ds.prefetch(tf.data.AUTOTUNE)
+# d2_val_ds=val_ds.prefetch(tf.data.AUTOTUNE)
+
+# d2_train_ds = train_ds2.prefetch(tf.data.AUTOTUNE)
+# d2_val_ds=val_ds2.prefetch(tf.data.AUTOTUNE)
+
+import matplotlib.pyplot as plt
+
+
+def plot_hist(hist):
+    fig, axs = plt.subplots(1, 2, figsize=(12, 6)) # create a figure with 1 row and 2 columns
+
+    # plot accuracy for training and validation sets
+    axs[0].plot(hist.history["accuracy"])
+    axs[0].plot(hist.history["val_accuracy"])
+    axs[0].set_title("model accuracy")
+    axs[0].set_ylabel("accuracy")
+    axs[0].set_xlabel("epoch")
+    axs[0].legend(["train", "validation"], loc="upper left")
+
+    # plot loss for training and validation sets
+    axs[1].plot(hist.history["loss"])
+    axs[1].plot(hist.history["val_loss"])
+    axs[1].set_title("model loss")
+    axs[1].set_ylabel("loss")
+    axs[1].set_xlabel("epoch")
+    axs[1].legend(["train", "validation"], loc="upper left")
+
+    plt.show()
+
+def get_label_array(dsi):
+    y=[]
+    for i in range(len(dsi)):
+        a,b=dsi[i]
+        b=np.argmax(b,axis=1)
+        y.append(b)
+
+    y= np.concatenate(y)
+    return y
+
+y_test1=get_label_array(d1_val_ds)
+# y_test2=get_label_array(d2_val_ds)
+
+from sklearn.metrics import confusion_matrix
+from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
+
+
+def print_stats(y_test,y_pred) :
+    confusion = confusion_matrix(y_test, y_pred)
+    print('Confusion Matrix\n')
+    print(confusion)
+    print('\nAccuracy: {:.2f}\n'.format(accuracy_score(y_test, y_pred)))
+
+    print('Micro Precision: {:.2f}'.format(precision_score(y_test, y_pred, average='micro')))
+    print('Micro Recall: {:.2f}'.format(recall_score(y_test, y_pred, average='micro')))
+    print('Micro F1-score: {:.2f}\n'.format(f1_score(y_test, y_pred, average='micro')))
+
+    print('Macro Precision: {:.2f}'.format(precision_score(y_test, y_pred, average='macro')))
+    print('Macro Recall: {:.2f}'.format(recall_score(y_test, y_pred, average='macro')))
+    print('Macro F1-score: {:.2f}\n'.format(f1_score(y_test, y_pred, average='macro')))
+
+    print('Weighted Precision: {:.2f}'.format(precision_score(y_test, y_pred, average='weighted')))
+    print('Weighted Recall: {:.2f}'.format(recall_score(y_test, y_pred, average='weighted')))
+    print('Weighted F1-score: {:.2f}'.format(f1_score(y_test, y_pred, average='weighted')))
+
+
+# from tensorflow.keras.layers import Lambda
+# from tensorflow.keras.metrics import AUC, Recall, Precision, SpecificityAtSensitivity, SensitivityAtSpecificity, FalseNegatives, FalsePositives, TrueNegatives, TruePositives, F1Score, FBetaScore
+
+# # Create the FBetaScore metric with custom parameters
+# fbeta_metric = FBetaScore(beta=2.0, average='micro')
+
+# # Create a Lambda layer to extract the fbeta score from the metrics dictionary
+# fbeta_lambda = Lambda(lambda x: x['fbeta_score'])
+
+# # Add the custom metric to the list of metrics
+# metrics = [
+#     'accuracy',
+#     AUC(),
+#     Recall(),
+#     Precision(),
+#     SpecificityAtSensitivity(0.5),
+#     SensitivityAtSpecificity(0.5),
+#     FalseNegatives(),
+#     FalsePositives(),
+#     TrueNegatives(),
+#     TruePositives(),
+#     F1Score(),
+#     fbeta_metric
+# ]
 
 
 
-
-
-def augment_dataset(dataset):
-    augmented_data = []
-    for img in dataset:
-        img = np.expand_dims(img, axis=0)
-        for _ in range(5): 
-            seed = np.random.randint(0, 1000) 
-            for batch in datagen.flow(img, batch_size=1, seed=seed):
-                augmented_data.append(np.squeeze(batch))
-                break
-    return np.array(augmented_data)
-
-
-
-
-X_train_augmented = augment_dataset(X_train)
-y_train_augmented = np.repeat(y_train,5, axis=0)
-
-
-X_test_augmented = augment_dataset(X_test)
-y_test_augmented = np.repeat(y_test,5, axis=0)
-
-
-
-
-X_test_augmented = augment_dataset(X_test)
-y_test_augmented = np.repeat(y_test,5, axis=0)
-
-print(79879132468498X_train_augmented shape:79879132468498, X_train_augmented.shape)
-print(79879132468498y_train_augmented shape:79879132468498, y_train_augmented.shape)
-
-print(79879132468498X_test_augmented shape:79879132468498, X_test_augmented.shape)
-print(79879132468498y_test_augmented shape:79879132468498, y_test_augmented.shape)
-
-from sklearn.utils import shuffle
-
-X_train_combined = np.concatenate((X_train, X_train_augmented))
-y_train_combined = np.concatenate((y_train, y_train_augmented))
-
-X_test_combined = np.concatenate((X_test, X_test_augmented))
-y_test_combined = np.concatenate((y_test, y_test_augmented))
-
-
-X_train_combined, y_train_combined = shuffle(X_train_combined, y_train_combined, random_state=42)
-X_test_combined, y_test_combined = shuffle(X_test_combined, y_test_combined, random_state=42)
-
-print(y_train_combined.shape)
-print(y_test_combined.shape)
-
-VGG 16
-
-!pip install autokeras
-
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.optimizers import Adam
-from keras_tuner.tuners import RandomSearch
-from tensorflow.keras.layers import Conv2D, MaxPooling2D, Flatten, Dense, Dropout
-from tensorflow.keras.applications import VGG16,Xception,VGG19
-from keras.datasets import cifar10
-from keras.applications.vgg16 import preprocess_input
-from keras.callbacks import EarlyStopping
 
 import tensorflow as tf
-from tensorflow.keras.applications import VGG16
-from tensorflow.keras.applications import EfficientNetB0
+from tensorflow.keras.metrics import Precision, SpecificityAtSensitivity, SensitivityAtSpecificity
+from tensorflow.keras.layers import Dropout
+from tensorflow.keras.callbacks import EarlyStopping
 
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Dense, Flatten
-from tensorflow.keras.optimizers import Adam
-from tensorflow.keras.preprocessing.image import ImageDataGenerator
-from keras_tuner.tuners import RandomSearch
+class F1Score(tf.keras.metrics.Metric):
+    def __init__(self, name='f1_score', **kwargs):
+        super(F1Score, self).__init__(name=name, **kwargs)
+        # Initialize variables to accumulate true positives, false positives, and false negatives
+        self.true_positives = self.add_weight('true_positives', initializer='zeros')
+        self.false_positives = self.add_weight('false_positives', initializer='zeros')
+        self.false_negatives = self.add_weight('false_negatives', initializer='zeros')
 
+    def update_state(self, y_true, y_pred, sample_weight=None):
+        y_true = tf.cast(y_true, tf.float32)
+        y_pred = tf.cast(tf.math.round(y_pred), tf.float32)
 
+        true_positives = tf.reduce_sum(y_true * y_pred)
+        false_positives = tf.reduce_sum(tf.clip_by_value(y_pred - y_true, 0, 1))
+        false_negatives = tf.reduce_sum(tf.clip_by_value(y_true - y_pred, 0, 1))
 
+        self.true_positives.assign_add(true_positives)
+        self.false_positives.assign_add(false_positives)
+        self.false_negatives.assign_add(false_negatives)
 
-base_model = VGG16(weights='imagenet', include_top=False, input_shape=(224, 224, 3))
+    def result(self):
+        precision = self.true_positives / (self.true_positives + self.false_positives + tf.keras.backend.epsilon())
+        recall = self.true_positives / (self.true_positives + self.false_negatives + tf.keras.backend.epsilon())
 
+        f1_score = 2 * (precision * recall) / (precision + recall + tf.keras.backend.epsilon())
+        return f1_score
 
-for layer in base_model.layers:
-    layer.trainable = False
+# from PIL import Image
 
-def build_model(hp):
-    model = Sequential()
-    model.add(base_model)
-    model.add(Flatten())
+# def create_data_augmentation_pipeline(img_size):
+#     data_aug = tf.keras.Sequential()
 
-    hp_units = hp.Int('units', min_value=32, max_value=512, step=32)
-    model.add(Dense(units=hp_units, activation='relu'))
-    model.add(Dropout(0.5))
-    model.add(Dense(1, activation='sigmoid'))  # Assuming binary classification
-
-    hp_learning_rate = hp.Choice('learning_rate', values=[1e-2, 1e-3, 1e-4])
-
-    model.compile(optimizer=Adam(learning_rate=hp_learning_rate),
-                  loss='binary_crossentropy',
-                  metrics=['accuracy'])
-
-    return model
-
-tuner = RandomSearch(
-    build_model,
-    objective='val_accuracy',
-    max_trials=5, 
-    directory='tuner_results',
-    project_name='vgg16_tuning'
-)
-train_datagen = ImageDataGenerator(rescale=1./255)
-test_datagen = ImageDataGenerator(rescale=1./255)
-train_generator = train_datagen.flow(X_train_combined, y_train_combined, batch_size=32)
-test_generator = test_datagen.flow(X_test_combined, y_test_combined, batch_size=32)
-
-
-tuner.search(train_generator, epochs=1, validation_data=test_generator)
-best_model = tuner.get_best_models(num_models=1)[0]
-best_model.summary()
-
-
-model_vgg16 = VGG16(weights=79879132468498imagenet79879132468498, include_top=False, input_shape=(224, 224, 3))
-model = Sequential()
-model.add(model_vgg16)
-model.add(Flatten())
-
-model.add(Dropout(0.2))
-model.add(Dense(1, activation='relu'))
-model.add(Dropout(0.2))
-model.add(Dense(1, activation='sigmoid'))
-model.summary()
-
-from tensorflow.keras.models import Model
-import tensorflow as tf
-from tensorflow.keras import backend as K
-metrics = [
-        'accuracy',
-        tf.keras.metrics.AUC(),
-        tf.keras.metrics.Recall(),
-        tf.keras.metrics.Precision(),
-        tf.keras.metrics.SpecificityAtSensitivity(0.5),
-        tf.keras.metrics.SensitivityAtSpecificity(0.5),
-        tf.keras.metrics.FalseNegatives(),
-        tf.keras.metrics.FalsePositives(),
-        tf.keras.metrics.TrueNegatives(),
-        tf.keras.metrics.TruePositives(),
-        tf.keras.metrics.F1Score()]
-
-model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=0.111), loss='binary_crossentropy', metrics=metrics)
+#     def resize_and_crop(image):
+#       # Convert the input tensor to a NumPy array
+#       image_array = image.numpy()
+#       # Resize and crop the image using PIL Imag
+#       image = Image.fromarray(image_array)
+#       image = image.resize((img_size, img_size))
+#       crop_height = int(0.2 * img_size)
+#       crop_width = int(0.8 * img_size)  # Adjust width to maintain aspect rati
+#       image = image.crop((0, 0, crop_width, crop_height))
+#       image = np.array(image)
+#       # Convert the NumPy array back to a tensor and return i
+#       image_tensor = tf.convert_to_tensor(image)
+#       return image_tensor
+#     # Create the data augmentation pipeline
+#     data_aug = tf.keras.Sequential([
+#     layers.Lambda(resize_and_crop),
+#     layers.RandomFlip('horizontal'),
+#     layers.RandomRotation(0.2),
+#     ])
 
 
+#     data_aug.add(layers.Lambda(resize_and_crop))
+#     data_aug.add(layers.RandomFlip('horizontal'))
+#     data_aug.add(layers.RandomRotation(0.2))
 
-callbacks = [
-    tf.keras.callbacks.EarlyStopping(
-   monitor='val_loss',patience=3,
-     restore_best_weights=True
-    )
-]
-# history = best_model.fit(X_train_combined, y_train_combined.astype('float32'), epochs=10,batch_size=32,validation_split=0.10,callbacks=callbacks)
+#     return data_aug
 
-history = model.fit(X_train_combined, y_train_combined.astype('float32'), epochs=20,callbacks=callbacks)
+# def Lambda(inputs):
+#     # Convert the input tensor to a NumPy array
+#     inputs_array = inputs.numpy()
 
-model.evaluate(X_test_combined,y_test_combined.astype('float32'))
+#     # Perform the desired operation on the NumPy array
+#     processed_array = np.some_operation(inputs_array)
+
+#     # Convert the NumPy array back to a tensor and return it
+#     processed_tensor = tf.convert_to_tensor(processed_array)
+#     return processed_tensor
+
+def create_model_train_print_hist(model,modelname) :
+    inputs = layers.Input(shape=(img_size,img_size, 3))
+    output = model(inputs)
+    global_average_layer = tf.keras.layers.GlobalAveragePooling2D()(output)
+    dropout_rate = 0.3  # You can adjust this rate based on experimentation
+    dropout_layer = Dropout(dropout_rate)(global_average_layer)
+    # Add the final dense layer for predictions
+    prediction_layer = tf.keras.layers.Dense(NUM_CLASSES, activation='sigmoid', kernel_regularizer=regularizers.l2(0.001))(dropout_layer)
+    # Create the model
+    model = tf.keras.Model(inputs=inputs, outputs=prediction_layer)
+
+    # data_aug = create_data_augmentation_pipeline(img_size)
+
+    model = tf.keras.Sequential( model)
+
+    # L2 Regularization: Add L2 regularization to the optimizer
+    optimizer = tf.keras.optimizers.Adam(lr=0.001, weight_decay=0.001)
+
+    # Compile the model
+    model.compile(optimizer=optimizer, loss="categorical_crossentropy", metrics=["accuracy",tf.keras.metrics.Precision(),tf.keras.metrics.SpecificityAtSensitivity(0.5),tf.keras.metrics.SensitivityAtSpecificity(0.5),F1Score()])
+
+    # Early Stopping: Implement early stopping to prevent overfitting
+    early_stopping = EarlyStopping(monitor='val_loss', patience=5, restore_best_weights=True)
+
+    # Train the model
+    hist = model.fit(d1_train_ds, epochs=40,batch_size=32, validation_data=d1_val_ds, verbose=2, callbacks=[early_stopping])
+    print("------MK D1-------")
+    plot_hist(hist)
+    # Save the model
+    model.save(modelname+'d1.h5')
+
+    # Evaluate the model
+    y_test_pred=model.predict(d1_val_ds)
+    y_test_pred=np.argmax(y_test_pred,axis=1)
+    print_stats(y_test1,y_test_pred)
+
+  #  # hist = model2.fit(d2_train_ds, epochs=epochs, validation_data=d2_val_ds, verbose=2)
+  #  # model2.save(modelname+'d2.h5')
+  #  # print("------MK D2-------")
+  #  # plot_hist(hist)
+
+#    # y_test_pred=model1.predict(d2_val_ds)
+#    # y_test_pred=np.argmax(y_test_pred,axis=1)
+#    # print_stats(y_test2,y_test_pred)
+
+# from tensorflow.keras.utils import to_categorical
+
+# # Assuming y_test1 is your ground truth labels
+# print("Example label from y_test1:", y_test1[0])
+
+# # Convert to one-hot encoding
+# y_test1_one_hot = to_categorical(y_test1, num_classes=NUM_CLASSES)
+
+# # Check the shape of the one-hot encoded labels
+# print("Shape of y_test1_one_hot:", y_test1_one_hot.shape)
+
+
+
+model=EfficientNetB0(include_top=False, weights=None, classes=2)
+create_model_train_print_hist(model,'mobilenetv2')
+
+
+
+# Save the trained model
+
+model.save('/content/drive/MyDrive/MKdata/D1/model_efficientnet.h5')
+
+# Load the saved model for testing
+loaded_model = tf.keras.models.load_model('/content/drive/MyDrive/MKdata/D1/model_efficientnet.h5')
+model.compile( optimizer="adam", loss="categorical_crossentropy", metrics=["accuracy",tf.keras.metrics.Precision(),tf.keras.metrics.SpecificityAtSensitivity(0.5),tf.keras.metrics.SensitivityAtSpecificity(0.5),F1Score()])
+
+# Evaluate the model on the test dataset
+test_loss, test_accuracy = loaded_model.evaluate(d1_val_ds)
+print(f'Test Accuracy: {test_accuracy * 100:.2f}%')
+
+# # Assuming you have already compiled and trained your model
+
+# # Evaluate the model on the testing dataset
+# test_loss, test_accuracy = model.evaluate(test_data, test_labels)
+
+# # Print the testing accuracy
+# print(f'Testing Accuracy: {test_accuracy * 100:.2f}%')
+
+# from tensorflow.keras.models import Model
+# import tensorflow as tf
+# from tensorflow.keras import backend as K
+# metrics = [
+#         'accuracy',
+#         tf.keras.metrics.AUC(),
+#         tf.keras.metrics.Recall(),
+#         tf.keras.metrics.Precision(),
+#         tf.keras.metrics.SpecificityAtSensitivity(0.5),
+#         tf.keras.metrics.SensitivityAtSpecificity(0.5),
+#         tf.keras.metrics.FalseNegatives(),
+#         tf.keras.metrics.FalsePositives(),
+#         tf.keras.metrics.TrueNegatives(),
+#         tf.keras.metrics.TruePositives(),
+#         tf.keras.metrics.F1Score()]
+
+# model.compile(optimizer=tf.keras.optimizers.Adam(lr=0.11), loss='binary_crossentropy', metrics=metrics)
+
+from tensorflow.keras.models import load_model
+
+# Load the saved model
+saved_model_path = '/content/drive/MyDrive/MKdata/D1/model_efficientnet.h5'
+loaded_model = load_model(saved_model_path)
+test_loss, test_accuracy = loaded_model.evaluate(d1_val_ds)
+
+
+
